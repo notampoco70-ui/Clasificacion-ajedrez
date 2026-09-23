@@ -4,16 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema de Clasificación de Ajedrez</title>
-  <!-- Tailwind CSS por CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js por CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen p-6">
 
-  <!-- ===================== -->
-  <!-- Modal: Punto 1 - Pedir nombre/nickname del usuario -->
-  <!-- ===================== -->
+  <!-- Modal de Bienvenida (Nickname) -->
   <div id="modalBienvenida" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[60]">
     <div class="bg-slate-800 rounded-xl max-w-sm w-full p-6 border border-amber-500/40 shadow-xl space-y-4 text-center">
       <h2 class="text-2xl font-bold text-amber-400">♟️ Bienvenido</h2>
@@ -33,30 +29,18 @@
     </div>
   </div>
 
-  <!-- ===================== -->
-  <!-- Punto 3: Pantalla de espera (máx. 5 seg) con aviso de carga -->
-  <!-- Simula un reloj de ajedrez con dos carátulas, una "activa" a la vez -->
-  <!-- ===================== -->
+  <!-- Reloj de Ajedrez (Pantalla Carga) -->
   <div id="pantallaCarga" class="fixed inset-0 bg-black/90 hidden items-center justify-center p-4 z-[70]">
     <div class="text-center space-y-6">
-
-      <!-- Cuerpo del reloj de ajedrez: dos carátulas + botón central -->
       <div class="flex items-center justify-center gap-0">
-
-        <!-- Carátula izquierda (jugador con blancas) -->
         <div id="caratulaIzq" class="w-28 h-28 rounded-full border-4 border-slate-600 bg-slate-800 flex items-center justify-center transition-all duration-300">
           <span id="tiempoIzq" class="text-2xl font-mono font-bold text-slate-400">0:05</span>
         </div>
-
-        <!-- Botón/palanca central del reloj -->
         <div class="w-6 h-14 bg-slate-700 rounded mx-1 border border-slate-600"></div>
-
-        <!-- Carátula derecha (jugador con negras) -->
         <div id="caratulaDer" class="w-28 h-28 rounded-full border-4 border-slate-600 bg-slate-800 flex items-center justify-center transition-all duration-300">
           <span id="tiempoDer" class="text-2xl font-mono font-bold text-slate-400">0:05</span>
         </div>
       </div>
-
       <p class="text-amber-400 font-semibold text-lg animate-pulse">
         ⏳ Cargando el sistema de clasificación, por favor espera...
       </p>
@@ -66,24 +50,102 @@
 
   <div id="contenidoPrincipal" class="max-w-7xl mx-auto space-y-8 hidden">
 
-    <!-- Encabezado -->
-    <header class="flex justify-between items-center border-b border-slate-700 pb-4">
+    <!-- Encabezado con Botones de BD -->
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-700 pb-4">
       <div>
         <h1 class="text-3xl font-bold text-amber-400">♟️ Clasificación de Ajedrez</h1>
-        <!-- Punto 2: Mensaje de bienvenida armado con operador de concatenación (+) -->
         <p id="mensajeBienvenida" class="text-slate-400 text-sm"></p>
       </div>
-      <button onclick="abrirModalNuevo()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold px-4 py-2 rounded-lg transition shadow">
-        + Nuevo Jugador
-      </button>
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="ejecutarOpcionMenu(4)" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold px-3 py-2 rounded-lg text-xs transition">
+          👤 Cambiar Usuario
+        </button>
+        <button id="btnGenerar1000" onclick="generarRegistros1000()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-3 py-2 rounded-lg text-xs transition shadow flex items-center gap-1">
+          ⚡ Generar 1000 Registros
+        </button>
+        <button id="btnVaciarBD" onclick="vaciarBaseDeDatos()" class="bg-rose-700 hover:bg-rose-600 text-white font-semibold px-3 py-2 rounded-lg text-xs transition shadow flex items-center gap-1">
+          🗑️ Vaciar BD
+        </button>
+        <button onclick="abrirModalNuevo()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold px-4 py-2 rounded-lg text-xs transition shadow">
+          + Nuevo Jugador BD
+        </button>
+      </div>
     </header>
 
-    <!-- 1. Tabla de Jugadores (ARRIBA) con Buscador y Filtros -->
+    <!-- Sección de Manejo de Archivos y Excepciones -->
+    <section class="bg-slate-800 rounded-xl border border-amber-500/30 p-6 shadow-xl space-y-6">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-700 pb-4">
+        <div>
+          <h2 class="text-xl font-bold text-amber-400 flex items-center gap-2">
+            📁 Control de Archivos, Tuplas y Excepciones (Python)
+          </h2>
+          <p class="text-xs text-slate-400">
+            Formato de fecha <code class="text-amber-300">dd/mm/aa</code> almacenada en tuplas, diccionario de archivos y captura <code class="text-amber-300">try/except</code>.
+          </p>
+        </div>
+      </div>
+
+      <!-- Menú Opciones principales -->
+      <div id="contenedorMenuOpciones" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      </div>
+
+      <!-- Opción 1: Formulario Crear Ficha TXT (con Fecha) -->
+      <div id="formCrearFicha" class="hidden bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-3">
+        <h3 class="text-sm font-bold text-amber-400">📝 Crear Nueva Ficha (.txt)</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <input type="text" id="txtNombre" placeholder="Nombre completo *" class="bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white">
+          <input type="text" id="txtPais" placeholder="País" class="bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white">
+          <select id="txtTitulo" class="bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white">
+            <option value="Ninguno">Título: Ninguno</option>
+            <option value="CM">CM</option>
+            <option value="FM">FM</option>
+            <option value="IM">IM</option>
+            <option value="GM">GM</option>
+          </select>
+          <input type="text" id="txtFechaCrear" placeholder="Fecha (dd/mm/aa) *" class="bg-slate-800 border border-amber-500/50 rounded p-2 text-xs text-white">
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input type="number" id="txtElo" placeholder="ELO (Ej: 1500)" value="1200" class="bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white">
+          <input type="text" id="txtEnfrentamientos" placeholder="Enfrentamientos (Ej: 3 victorias vs Kasparov)" class="bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white">
+        </div>
+        <button onclick="enviarCrearFicha()" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold rounded">
+          Guardar con Tupla de Fecha en Python
+        </button>
+      </div>
+
+      <!-- Opción 2 y 3: Selección de Diccionario de Archivos -->
+      <div id="formModificarFicha" class="hidden bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-3">
+        <h3 id="tituloModificar" class="text-sm font-bold text-amber-400">📄 Seleccionar Archivo del Diccionario</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <select id="selectArchivosTxt" class="bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white">
+            <option value="">Cargando diccionario de archivos...</option>
+          </select>
+          <input type="text" id="txtFechaAnexar" placeholder="Fecha (dd/mm/aa) *" class="bg-slate-800 border border-amber-500/50 rounded p-2 text-xs text-white">
+          <input type="text" id="txtNotaAdicional" placeholder="Observación a anexar..." class="bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white">
+        </div>
+        <div class="flex gap-2">
+          <button onclick="enviarLeerEspecifico()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-xs text-white rounded">Leer Selección</button>
+          <button onclick="enviarEscribirNota()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-xs text-slate-950 font-bold rounded">Anexar Nota con Fecha</button>
+        </div>
+      </div>
+
+      <!-- Consola de Salida -->
+      <div class="bg-slate-950 border border-slate-800 rounded-lg p-4 font-mono text-xs space-y-2 shadow-inner">
+        <div class="flex items-center justify-between text-slate-500 border-b border-slate-800 pb-2 mb-2">
+          <span>SALIDA_CONSOLA_PYTHON ~ try_except_file_handler.py</span>
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        </div>
+        <div id="consolaSalidaPython" class="text-emerald-400 min-h-[120px] whitespace-pre-wrap leading-relaxed space-y-1">
+          > Consola lista. Selecciona una opción del menú.
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabla MySQL -->
     <section class="bg-slate-800 rounded-xl border border-slate-700 p-4 shadow space-y-4">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h2 class="text-xl font-bold text-slate-200">Listado de Jugadores</h2>
+        <h2 class="text-xl font-bold text-slate-200">Listado de Jugadores (Base de Datos)</h2>
         
-        <!-- Barra de búsqueda y Filtros -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full md:w-auto">
           <input 
             type="text" 
@@ -129,13 +191,12 @@
             </tr>
           </thead>
           <tbody id="tablaJugadores" class="divide-y divide-slate-700 text-sm">
-            <!-- Contenido dinámico -->
           </tbody>
         </table>
       </div>
     </section>
 
-    <!-- 2. Sección de Gráficas (ABAJO) -->
+    <!-- Gráficas -->
     <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow flex flex-col h-80">
         <h3 class="text-lg font-semibold mb-2 text-slate-300">Top 10 Jugadores (ELO)</h3>
@@ -165,7 +226,7 @@
 
   </div>
 
-  <!-- Modal para Crear / Editar Jugador -->
+  <!-- Modal Crear/Editar Jugador -->
   <div id="modalJugador" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50">
     <div class="bg-slate-800 rounded-xl max-w-md w-full p-6 border border-slate-700 shadow-xl space-y-4">
       <h3 id="modalTitulo" class="text-xl font-bold text-amber-400">Agregar Jugador</h3>
@@ -214,59 +275,42 @@
     </div>
   </div>
 
-  <!-- JavaScript -->
   <script>
     const API_URL = "http://127.0.0.1:8000/api";
     let todosLosJugadores = [];
     let chartTop10, chartTitulos, chartRangos, chartPaises;
-    let nombreUsuario = ""; // Punto 1: aquí se guarda el nickname del usuario actual
+    let nombreUsuario = "";
 
-    // Al cargar la página SOLO mostramos el modal de bienvenida.
-    // La tabla y las gráficas se cargan hasta que el usuario ingresa su nombre (ver guardarNickname).
     window.onload = () => {
       document.getElementById("inputNickname").focus();
     };
 
-    // ==========================================================
-    // Punto 1 y 2: Captura de nombre/nickname + mensaje de bienvenida
-    // ==========================================================
     window.guardarNickname = async function (e) {
-      e.preventDefault(); // Evita que el formulario recargue la página
+      e.preventDefault();
 
       const campoNombre = document.getElementById("inputNickname");
-      // Quitamos espacios extra al inicio/fin con trim()
       nombreUsuario = campoNombre.value.trim();
 
       if (nombreUsuario === "") {
-        alert("Por favor escribe un nombre o nickname válido.");
+        alert("Por favor escribe un nombre válido.");
         return;
       }
 
-      // Punto 2: mensaje de bienvenida construido con el operador de concatenación (+)
-      const mensaje = "👋 Bienvenido/a, " + nombreUsuario + ". Aquí puedes gestionar la clasificación de ajedrez.";
-      document.getElementById("mensajeBienvenida").innerText = mensaje;
-
-      // Ocultamos el modal de bienvenida...
+      document.getElementById("mensajeBienvenida").innerText = "👋 Sesión activa como: " + nombreUsuario;
       document.getElementById("modalBienvenida").classList.add("hidden");
 
-      // ...y mostramos la pantalla de carga (Punto 3) antes de revelar el sistema
       await mostrarPantallaCarga();
 
       document.getElementById("contenidoPrincipal").classList.remove("hidden");
 
-      // Cargamos los datos reales (tabla y gráficas)
       await cargarTabla();
       await cargarGraficas();
+      await cargarMenuPython();
     };
 
-    // ==========================================================
-    // Punto 3: Mensaje/animación de espera (máx. 5 segundos)
-    // Se representa como un reloj de ajedrez: dos carátulas que
-    // se van "iluminando" por turnos mientras baja la cuenta.
-    // ==========================================================
     function mostrarPantallaCarga() {
       return new Promise((resolve) => {
-        const TIEMPO_MAXIMO = 5; // segundos, según el punto 3 (máximo 5 seg)
+        const TIEMPO_MAXIMO = 5;
         let segundosRestantes = TIEMPO_MAXIMO;
 
         const pantalla = document.getElementById("pantallaCarga");
@@ -278,18 +322,10 @@
         pantalla.classList.remove("hidden");
         pantalla.classList.add("flex");
 
-        let turnoIzquierda = true; // alterna qué lado del reloj "está corriendo"
+        let turnoIzquierda = true;
 
-        // Formatea segundos como 0:0X, al estilo de un reloj de ajedrez
-        function formatoTiempo(s) {
-          return "0:0" + s; // Punto 2 (reforzado aquí): concatenación de strings
-        }
-
-        // Ciclo de "tick" cada segundo, controlado con setInterval en vez de time.sleep()
         const intervalo = setInterval(() => {
           segundosRestantes--;
-
-          // Alternamos el turno visual, como si alguien presionara el reloj
           turnoIzquierda = !turnoIzquierda;
 
           if (turnoIzquierda) {
@@ -300,31 +336,193 @@
             caratulaIzq.classList.remove("border-amber-400", "bg-slate-700");
           }
 
-          const restanteTexto = formatoTiempo(Math.max(segundosRestantes, 0));
-          tiempoIzq.innerText = restanteTexto;
-          tiempoDer.innerText = restanteTexto;
+          const txt = "0:0" + Math.max(segundosRestantes, 0);
+          tiempoIzq.innerText = txt;
+          tiempoDer.innerText = txt;
 
-          // Cuando llega a 0, se detiene el reloj y se revela el sistema
           if (segundosRestantes <= 0) {
             clearInterval(intervalo);
             pantalla.classList.add("hidden");
             pantalla.classList.remove("flex");
-            resolve(); // Aquí "avisamos" que ya se puede continuar
+            resolve();
           }
         }, 1000);
       });
     }
 
-    // Función auxiliar para el botón "Cambiar de usuario" (la usará tu compañero en el punto 4,
-    // pero la dejamos lista aquí porque depende del nickname).
-    window.cambiarUsuario = function () {
-      document.getElementById("contenidoPrincipal").classList.add("hidden");
-      document.getElementById("modalBienvenida").classList.remove("hidden");
-      document.getElementById("formBienvenida").reset();
-      document.getElementById("inputNickname").focus();
-    };
+    // Funciones de Administración de Base de Datos
+    async function vaciarBaseDeDatos() {
+  if (!confirm("⚠️ ¿Estás seguro de que deseas VACIAR completamente la base de datos?\nSe eliminarán todos los jugadores de MySQL.")) {
+    return;
+  }
 
-    // 1. Cargar datos de la tabla
+  const btn = document.getElementById("btnVaciarBD");
+  btn.disabled = true;
+  btn.innerHTML = "⏳ Vaciando...";
+
+  try {
+    const res = await fetch(`${API_URL}/jugadores/todos`, { method: "DELETE" });
+    const data = await res.json();
+
+    if (res.ok) {
+      alert("🗑️ " + data.mensaje);
+      await cargarTabla();
+      await cargarGraficas();
+    } else {
+      // Si el detalle es un objeto/lista, lo formateamos a texto
+      const detalle = typeof data.detail === "object" ? JSON.stringify(data.detail, null, 2) : data.detail;
+      alert("❌ Error del servidor:\n" + (detalle || "No se pudo vaciar la BD."));
+    }
+  } catch (err) {
+    console.error("Error al vaciar la BD:", err);
+    alert("❌ Error de comunicación con el backend:\n" + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "🗑️ Vaciar BD";
+  }
+}
+
+async function generarRegistros1000() {
+  const btn = document.getElementById("btnGenerar1000");
+  btn.disabled = true;
+  btn.innerHTML = "⏳ Generando 1000 jugadores...";
+
+  try {
+    const res = await fetch(`${API_URL}/jugadores/generar?cantidad=1000`, { method: "POST" });
+    const data = await res.json();
+
+    if (res.ok) {
+      alert("⚡ " + data.mensaje);
+      await cargarTabla();
+      await cargarGraficas();
+    } else {
+      const detalle = typeof data.detail === "object" ? JSON.stringify(data.detail, null, 2) : data.detail;
+      alert("❌ Error del servidor:\n" + (detalle || "No se pudieron generar los registros."));
+    }
+  } catch (err) {
+    console.error("Error al generar 1000 registros:", err);
+    alert("❌ Error de comunicación con el backend:\n" + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "⚡ Generar 1000 Registros";
+  }
+}
+
+    // Menú de Manejo de Archivos
+    async function cargarMenuPython() {
+      try {
+        const res = await fetch(`${API_URL}/menu`);
+        const data = await res.json();
+        
+        const contenedor = document.getElementById("contenedorMenuOpciones");
+        contenedor.innerHTML = data.opciones.map(op => `
+          <button 
+            onclick="seleccionarOpcionMenu(${op.id})"
+            class="flex flex-col items-start p-3 bg-slate-900 hover:bg-amber-500/10 border border-slate-700 hover:border-amber-500/60 rounded-lg transition text-left group"
+          >
+            <span class="text-xs font-bold text-amber-400 group-hover:text-amber-300">Opción ${op.id}</span>
+            <span class="text-sm font-semibold text-slate-200 mt-1">${op.titulo}</span>
+            <span class="text-[10px] text-slate-400 mt-1">${op.descripcion}</span>
+          </button>
+        `).join("");
+      } catch (err) {
+        console.error("Error al cargar menú:", err);
+      }
+    }
+
+    function seleccionarOpcionMenu(opcionId) {
+      document.getElementById("formCrearFicha").classList.add("hidden");
+      document.getElementById("formModificarFicha").classList.add("hidden");
+
+      if (opcionId === 1) {
+        document.getElementById("formCrearFicha").classList.remove("hidden");
+        document.getElementById("txtNombre").focus();
+      } else if (opcionId === 2 || opcionId === 3) {
+        document.getElementById("formModificarFicha").classList.remove("hidden");
+        ejecutarOpcionMenu(opcionId);
+      } else if (opcionId === 4) {
+        ejecutarOpcionMenu(4);
+      }
+    }
+
+    async function ejecutarOpcionMenu(opcionId, payloadExtra = {}) {
+      const consola = document.getElementById("consolaSalidaPython");
+      consola.innerHTML = `> Procesando Opción ${opcionId} en Python...\n`;
+
+      const payload = {
+        opcion: opcionId,
+        usuario_actual: nombreUsuario,
+        ...payloadExtra
+      };
+
+      try {
+        const res = await fetch(`${API_URL}/menu/ejecutar`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        consola.innerHTML = data.lineas_consola.map(l => `<div>${l}</div>`).join("");
+
+        if (data.dict_archivos) {
+          const select = document.getElementById("selectArchivosTxt");
+          select.innerHTML = '<option value="">Selecciona del Diccionario...</option>' + 
+            Object.entries(data.dict_archivos).map(([clave, archivo]) => 
+              `<option value="${clave}">Clave [${clave}] -> ${archivo}</option>`
+            ).join("");
+        }
+
+        if (opcionId === 4) {
+          setTimeout(() => {
+            document.getElementById("contenidoPrincipal").classList.add("hidden");
+            document.getElementById("modalBienvenida").classList.remove("hidden");
+            document.getElementById("formBienvenida").reset();
+            document.getElementById("inputNickname").focus();
+          }, 1500);
+        }
+
+      } catch (err) {
+        consola.innerHTML = `<span class="text-red-400">❌ Error de conexión con el backend de Python.</span>`;
+        console.error(err);
+      }
+    }
+
+    function enviarCrearFicha() {
+      const nombre = document.getElementById("txtNombre").value;
+      const pais = document.getElementById("txtPais").value;
+      const titulo = document.getElementById("txtTitulo").value;
+      const fecha = document.getElementById("txtFechaCrear").value;
+      const elo = document.getElementById("txtElo").value;
+      const enfrentamientos = document.getElementById("txtEnfrentamientos").value;
+
+      if (!fecha) {
+        alert("Ingresa la fecha en formato dd/mm/aa (ej: 23/09/26).");
+        return;
+      }
+
+      ejecutarOpcionMenu(1, { nombre, pais, titulo, fecha, elo, enfrentamientos });
+    }
+
+    function enviarLeerEspecifico() {
+      const archivoClave = document.getElementById("selectArchivosTxt").value;
+      ejecutarOpcionMenu(2, { archivo_solicitado: archivoClave });
+    }
+
+    function enviarEscribirNota() {
+      const archivoClave = document.getElementById("selectArchivosTxt").value;
+      const fecha = document.getElementById("txtFechaAnexar").value;
+      const nota = document.getElementById("txtNotaAdicional").value;
+
+      if (!fecha) {
+        alert("Ingresa la fecha en formato dd/mm/aa para el anexo.");
+        return;
+      }
+
+      ejecutarOpcionMenu(3, { archivo_solicitado: archivoClave, fecha: fecha, nota_adicional: nota });
+    }
+
+    // Funciones Base de Datos MySQL
     async function cargarTabla() {
       try {
         const res = await fetch(`${API_URL}/jugadores`);
@@ -332,11 +530,10 @@
         poblarFiltroPaises();
         filtrarJugadores();
       } catch (err) {
-        console.error("Error al cargar la tabla:", err);
+        console.error("Error cargando tabla MySQL:", err);
       }
     }
 
-    // Llenar el menú desplegable de países
     function poblarFiltroPaises() {
       const selectPais = document.getElementById("filtroPais");
       const valorPrevio = selectPais.value;
@@ -344,11 +541,9 @@
       
       selectPais.innerHTML = '<option value="">Todos los Países</option>' + 
         paises.map(p => `<option value="${p}">${p}</option>`).join("");
-      
       selectPais.value = valorPrevio;
     }
 
-    // Filtrar y ordenar resultados
     function filtrarJugadores() {
       const textoBuscar = document.getElementById("inputBuscar").value.trim().toLowerCase();
       const paisSeleccionado = document.getElementById("filtroPais").value;
@@ -366,16 +561,12 @@
         return cumpleNombre && cumplePais && cumpleRangoElo;
       });
 
-      if (opcionElo === "asc") {
-        resultados.sort((a, b) => a.elo - b.elo);
-      } else if (opcionElo === "desc") {
-        resultados.sort((a, b) => b.elo - a.elo);
-      }
+      if (opcionElo === "asc") resultados.sort((a, b) => a.elo - b.elo);
+      else if (opcionElo === "desc") resultados.sort((a, b) => b.elo - a.elo);
 
       renderizarTabla(resultados);
     }
 
-    // Pintar filas en la tabla
     function renderizarTabla(lista) {
       const tbody = document.getElementById("tablaJugadores");
       if (lista.length === 0) {
@@ -399,7 +590,6 @@
       `).join("");
     }
 
-    // 2. Cargar Gráficas
     async function cargarGraficas() {
       try {
         const res = await fetch(`${API_URL}/estadisticas`);
@@ -410,73 +600,40 @@
         if (chartRangos) chartRangos.destroy();
         if (chartPaises) chartPaises.destroy();
 
-        const opcionesBase = {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              labels: { color: '#cbd5e1' }
-            }
-          }
-        };
+        const opcionesBase = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#cbd5e1' } } } };
 
-        // Top 10
         chartTop10 = new Chart(document.getElementById("chartTop10"), {
           type: "bar",
-          data: {
-            labels: data.top_10.map(d => d.nombre),
-            datasets: [{ label: "ELO", data: data.top_10.map(d => d.elo), backgroundColor: "#f59e0b" }]
-          },
-          options: {
-            ...opcionesBase,
-            plugins: { legend: { display: false } }
-          }
+          data: { labels: data.top_10.map(d => d.nombre), datasets: [{ label: "ELO", data: data.top_10.map(d => d.elo), backgroundColor: "#f59e0b" }] },
+          options: { ...opcionesBase, plugins: { legend: { display: false } } }
         });
 
-        // Títulos
         chartTitulos = new Chart(document.getElementById("chartTitulos"), {
           type: "doughnut",
-          data: {
-            labels: data.titulos.map(d => d.titulo),
-            datasets: [{ data: data.titulos.map(d => d.cantidad), backgroundColor: ["#64748b", "#3b82f6", "#10b981", "#f59e0b", "#ef4444"] }]
-          },
+          data: { labels: data.titulos.map(d => d.titulo), datasets: [{ data: data.titulos.map(d => d.cantidad), backgroundColor: ["#64748b", "#3b82f6", "#10b981", "#f59e0b", "#ef4444"] }] },
           options: opcionesBase
         });
 
-        // Rangos ELO
         chartRangos = new Chart(document.getElementById("chartRangos"), {
           type: "pie",
-          data: {
-            labels: data.rangos_elo.map(d => d.rango),
-            datasets: [{ data: data.rangos_elo.map(d => d.cantidad), backgroundColor: ["#38bdf8", "#818cf8", "#c084fc", "#f472b6", "#fb7185"] }]
-          },
+          data: { labels: data.rangos_elo.map(d => d.rango), datasets: [{ data: data.rangos_elo.map(d => d.cantidad), backgroundColor: ["#38bdf8", "#818cf8", "#c084fc", "#f472b6", "#fb7185"] }] },
           options: opcionesBase
         });
 
-        // Países
         chartPaises = new Chart(document.getElementById("chartPaises"), {
           type: "bar",
-          data: {
-            labels: data.paises.map(d => d.pais),
-            datasets: [{ label: "Jugadores", data: data.paises.map(d => d.cantidad), backgroundColor: "#6366f1" }]
-          },
-          options: {
-            ...opcionesBase,
-            indexAxis: "y",
-            plugins: { legend: { display: false } }
-          }
+          data: { labels: data.paises.map(d => d.pais), datasets: [{ label: "Jugadores", data: data.paises.map(d => d.cantidad), backgroundColor: "#6366f1" }] },
+          options: { ...opcionesBase, indexAxis: "y", plugins: { legend: { display: false } } }
         });
       } catch (err) {
-        console.error("Error al cargar las gráficas:", err);
+        console.error("Error al cargar gráficas:", err);
       }
     }
 
-    // Funciones Globales para Modal y CRUD
     window.abrirModalNuevo = function() {
       document.getElementById("modalTitulo").innerText = "Agregar Jugador";
       document.getElementById("jugadorId").value = "";
       document.getElementById("formJugador").reset();
-      
       const modal = document.getElementById("modalJugador");
       modal.classList.remove("hidden");
       modal.classList.add("flex");
@@ -496,31 +653,26 @@
       document.getElementById("titulo").value = j.titulo;
       document.getElementById("elo").value = j.elo;
       document.getElementById("partidas").value = j.partidas_jugadas;
-      
       const modal = document.getElementById("modalJugador");
       modal.classList.remove("hidden");
       modal.classList.add("flex");
     };
 
     window.eliminarJugador = async function(id) {
-      if (!confirm("¿Seguro que deseas eliminar este jugador?")) return;
-
+      if (!confirm("¿Seguro que deseas eliminar este jugador de la BD?")) return;
       try {
         const res = await fetch(`${API_URL}/jugadores/${id}`, { method: "DELETE" });
         if (res.ok) {
           await cargarTabla();
           await cargarGraficas();
-        } else {
-          alert("Error al eliminar el jugador.");
         }
       } catch (err) {
-        console.error("Error al eliminar jugador:", err);
+        console.error("Error al eliminar:", err);
       }
     };
 
     window.guardarJugador = async function(e) {
       e.preventDefault();
-      
       const id = document.getElementById("jugadorId").value;
       const body = {
         nombre: document.getElementById("nombre").value,
@@ -544,11 +696,9 @@
           cerrarModal();
           await cargarTabla();
           await cargarGraficas();
-        } else {
-          alert("Error al guardar el jugador. Revisa la consola.");
         }
       } catch (err) {
-        console.error("Error en la petición guardarJugador:", err);
+        console.error("Error al guardar jugador BD:", err);
       }
     };
   </script>

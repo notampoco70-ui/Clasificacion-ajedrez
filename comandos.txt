@@ -8,3 +8,49 @@ python generador_datos.py
 
 #Iniciar el servidor backend
 python -m uvicorn main:app --reload
+
+-- ==========================================================
+-- COMANDOS DE VERIFICACIÓN Y CONSULTA (MYSQL WORKBENCH)
+-- ==========================================================
+
+-- 1. Mostrar todas las bases de datos y seleccionar la del proyecto
+SHOW DATABASES;
+USE ajedrez_db;
+
+-- 2. Mostrar las tablas existentes
+SHOW TABLES;
+
+-- 3. Ver la estructura de la tabla 'jugadores' (columnas y tipos de datos)
+DESCRIBE jugadores;
+
+-- 4. Mostrar el total de jugadores registrados actualmente
+SELECT COUNT(*) AS total_jugadores FROM jugadores;
+
+-- 5. Mostrar todos los jugadores ordenados por ELO (de mayor a menor)
+SELECT * FROM jugadores ORDER BY elo DESC;
+
+-- 6. Mostrar solo los 10 mejores jugadores (Top 10)
+SELECT id, nombre, pais, titulo, elo FROM jugadores ORDER BY elo DESC LIMIT 10;
+
+
+-- ==========================================================
+-- COMANDOS PARA ELIMINAR REGISTROS
+-- ==========================================================
+
+-- 7. Borrar exactamente registros (los primeros por ID)
+DELETE FROM jugadores ORDER BY id ASC LIMIT numero;
+
+-- (Opción alternativa): Borrar un rango específico de IDs (ejemplo del ID 1 al 11)
+-- DELETE FROM jugadores WHERE id BETWEEN 1 AND 11;
+
+
+-- ==========================================================
+-- COMANDO DE COMPROBACIÓN FINAL
+-- ==========================================================
+
+-- 8. Comprobar cuántos registros quedaron tras la eliminación
+SELECT COUNT(*) AS total_despues_de_borrar FROM jugadores;
+SELECT * FROM jugadores ORDER BY id ASC LIMIT 15;
+
+-- 8. BORRAR DATOS
+TRUNCATE TABLE jugadores;
