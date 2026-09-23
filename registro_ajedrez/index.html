@@ -327,7 +327,7 @@
     // 1. Cargar datos de la tabla
     async function cargarTabla() {
       try {
-        const res = await fetch(${API_URL}/jugadores);
+        const res = await fetch(`${API_URL}/jugadores`);
         todosLosJugadores = await res.json();
         poblarFiltroPaises();
         filtrarJugadores();
@@ -343,7 +343,7 @@
       const paises = [...new Set(todosLosJugadores.map(j => j.pais))].sort();
       
       selectPais.innerHTML = '<option value="">Todos los Países</option>' + 
-        paises.map(p => <option value="${p}">${p}</option>).join("");
+        paises.map(p => `<option value="${p}">${p}</option>`).join("");
       
       selectPais.value = valorPrevio;
     }
@@ -379,7 +379,7 @@
     function renderizarTabla(lista) {
       const tbody = document.getElementById("tablaJugadores");
       if (lista.length === 0) {
-        tbody.innerHTML = <tr><td colspan="7" class="p-4 text-center text-slate-400">No se encontraron jugadores.</td></tr>;
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No se encontraron jugadores.</td></tr>`;
         return;
       }
 
@@ -402,7 +402,7 @@
     // 2. Cargar Gráficas
     async function cargarGraficas() {
       try {
-        const res = await fetch(${API_URL}/estadisticas);
+        const res = await fetch(`${API_URL}/estadisticas`);
         const data = await res.json();
 
         if (chartTop10) chartTop10.destroy();
@@ -506,7 +506,7 @@
       if (!confirm("¿Seguro que deseas eliminar este jugador?")) return;
 
       try {
-        const res = await fetch(${API_URL}/jugadores/${id}, { method: "DELETE" });
+        const res = await fetch(`${API_URL}/jugadores/${id}`, { method: "DELETE" });
         if (res.ok) {
           await cargarTabla();
           await cargarGraficas();
@@ -531,7 +531,7 @@
       };
 
       const metodo = id ? "PUT" : "POST";
-      const url = id ? ${API_URL}/jugadores/${id} : ${API_URL}/jugadores;
+      const url = id ? `${API_URL}/jugadores/${id}` : `${API_URL}/jugadores`;
 
       try {
         const res = await fetch(url, {
