@@ -11,13 +11,67 @@
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen p-6">
 
-  <div class="max-w-7xl mx-auto space-y-8">
-    
+  <!-- ===================== -->
+  <!-- Modal: Punto 1 - Pedir nombre/nickname del usuario -->
+  <!-- ===================== -->
+  <div id="modalBienvenida" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[60]">
+    <div class="bg-slate-800 rounded-xl max-w-sm w-full p-6 border border-amber-500/40 shadow-xl space-y-4 text-center">
+      <h2 class="text-2xl font-bold text-amber-400">♟️ Bienvenido</h2>
+      <p class="text-slate-300 text-sm">Antes de continuar, dinos cómo te llamas.</p>
+      <form id="formBienvenida" onsubmit="guardarNickname(event)" class="space-y-3">
+        <input
+          type="text"
+          id="inputNickname"
+          placeholder="Escribe tu nombre o nickname..."
+          required
+          class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-sm text-center focus:outline-none focus:border-amber-400"
+        >
+        <button type="submit" class="w-full px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold rounded-lg text-sm">
+          Entrar
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================== -->
+  <!-- Punto 3: Pantalla de espera (máx. 5 seg) con aviso de carga -->
+  <!-- Simula un reloj de ajedrez con dos carátulas, una "activa" a la vez -->
+  <!-- ===================== -->
+  <div id="pantallaCarga" class="fixed inset-0 bg-black/90 hidden items-center justify-center p-4 z-[70]">
+    <div class="text-center space-y-6">
+
+      <!-- Cuerpo del reloj de ajedrez: dos carátulas + botón central -->
+      <div class="flex items-center justify-center gap-0">
+
+        <!-- Carátula izquierda (jugador con blancas) -->
+        <div id="caratulaIzq" class="w-28 h-28 rounded-full border-4 border-slate-600 bg-slate-800 flex items-center justify-center transition-all duration-300">
+          <span id="tiempoIzq" class="text-2xl font-mono font-bold text-slate-400">0:05</span>
+        </div>
+
+        <!-- Botón/palanca central del reloj -->
+        <div class="w-6 h-14 bg-slate-700 rounded mx-1 border border-slate-600"></div>
+
+        <!-- Carátula derecha (jugador con negras) -->
+        <div id="caratulaDer" class="w-28 h-28 rounded-full border-4 border-slate-600 bg-slate-800 flex items-center justify-center transition-all duration-300">
+          <span id="tiempoDer" class="text-2xl font-mono font-bold text-slate-400">0:05</span>
+        </div>
+      </div>
+
+      <p class="text-amber-400 font-semibold text-lg animate-pulse">
+        ⏳ Cargando el sistema de clasificación, por favor espera...
+      </p>
+      <p class="text-slate-500 text-xs">Preparando tablero, jugadores y estadísticas</p>
+    </div>
+  </div>
+
+  <div id="contenidoPrincipal" class="max-w-7xl mx-auto space-y-8 hidden">
+
     <!-- Encabezado -->
     <header class="flex justify-between items-center border-b border-slate-700 pb-4">
       <div>
         <h1 class="text-3xl font-bold text-amber-400">♟️ Clasificación de Ajedrez</h1>
-        <p class="text-slate-400 text-sm">Gestión de jugadores y analíticas en tiempo real</p>
+        <!-- Punto 2: Mensaje de bienvenida armado con operador de concatenación (+) -->
+        <p id="mensajeBienvenida" class="text-slate-400 text-sm"></p>
       </div>
       <button onclick="abrirModalNuevo()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold px-4 py-2 rounded-lg transition shadow">
         + Nuevo Jugador
@@ -165,17 +219,115 @@
     const API_URL = "http://127.0.0.1:8000/api";
     let todosLosJugadores = [];
     let chartTop10, chartTitulos, chartRangos, chartPaises;
+    let nombreUsuario = ""; // Punto 1: aquí se guarda el nickname del usuario actual
 
-    // Inicializar al cargar
-    window.onload = async () => {
+    // Al cargar la página SOLO mostramos el modal de bienvenida.
+    // La tabla y las gráficas se cargan hasta que el usuario ingresa su nombre (ver guardarNickname).
+    window.onload = () => {
+      document.getElementById("inputNickname").focus();
+    };
+
+    // ==========================================================
+    // Punto 1 y 2: Captura de nombre/nickname + mensaje de bienvenida
+    // ==========================================================
+    window.guardarNickname = async function (e) {
+      e.preventDefault(); // Evita que el formulario recargue la página
+
+      const campoNombre = document.getElementById("inputNickname");
+      // Quitamos espacios extra al inicio/fin con trim()
+      nombreUsuario = campoNombre.value.trim();
+
+      if (nombreUsuario === "") {
+        alert("Por favor escribe un nombre o nickname válido.");
+        return;
+      }
+
+      // Punto 2: mensaje de bienvenida construido con el operador de concatenación (+)
+      const mensaje = "👋 Bienvenido/a, " + nombreUsuario + ". Aquí puedes gestionar la clasificación de ajedrez.";
+      document.getElementById("mensajeBienvenida").innerText = mensaje;
+
+      // Ocultamos el modal de bienvenida...
+      document.getElementById("modalBienvenida").classList.add("hidden");
+
+      // ...y mostramos la pantalla de carga (Punto 3) antes de revelar el sistema
+      await mostrarPantallaCarga();
+
+      document.getElementById("contenidoPrincipal").classList.remove("hidden");
+
+      // Cargamos los datos reales (tabla y gráficas)
       await cargarTabla();
       await cargarGraficas();
+    };
+
+    // ==========================================================
+    // Punto 3: Mensaje/animación de espera (máx. 5 segundos)
+    // Se representa como un reloj de ajedrez: dos carátulas que
+    // se van "iluminando" por turnos mientras baja la cuenta.
+    // ==========================================================
+    function mostrarPantallaCarga() {
+      return new Promise((resolve) => {
+        const TIEMPO_MAXIMO = 5; // segundos, según el punto 3 (máximo 5 seg)
+        let segundosRestantes = TIEMPO_MAXIMO;
+
+        const pantalla = document.getElementById("pantallaCarga");
+        const caratulaIzq = document.getElementById("caratulaIzq");
+        const caratulaDer = document.getElementById("caratulaDer");
+        const tiempoIzq = document.getElementById("tiempoIzq");
+        const tiempoDer = document.getElementById("tiempoDer");
+
+        pantalla.classList.remove("hidden");
+        pantalla.classList.add("flex");
+
+        let turnoIzquierda = true; // alterna qué lado del reloj "está corriendo"
+
+        // Formatea segundos como 0:0X, al estilo de un reloj de ajedrez
+        function formatoTiempo(s) {
+          return "0:0" + s; // Punto 2 (reforzado aquí): concatenación de strings
+        }
+
+        // Ciclo de "tick" cada segundo, controlado con setInterval en vez de time.sleep()
+        const intervalo = setInterval(() => {
+          segundosRestantes--;
+
+          // Alternamos el turno visual, como si alguien presionara el reloj
+          turnoIzquierda = !turnoIzquierda;
+
+          if (turnoIzquierda) {
+            caratulaIzq.classList.add("border-amber-400", "bg-slate-700");
+            caratulaDer.classList.remove("border-amber-400", "bg-slate-700");
+          } else {
+            caratulaDer.classList.add("border-amber-400", "bg-slate-700");
+            caratulaIzq.classList.remove("border-amber-400", "bg-slate-700");
+          }
+
+          const restanteTexto = formatoTiempo(Math.max(segundosRestantes, 0));
+          tiempoIzq.innerText = restanteTexto;
+          tiempoDer.innerText = restanteTexto;
+
+          // Cuando llega a 0, se detiene el reloj y se revela el sistema
+          if (segundosRestantes <= 0) {
+            clearInterval(intervalo);
+            pantalla.classList.add("hidden");
+            pantalla.classList.remove("flex");
+            resolve(); // Aquí "avisamos" que ya se puede continuar
+          }
+        }, 1000);
+      });
+    }
+
+    // Función auxiliar para el botón "Cambiar de usuario" (la usará tu compañero en el punto 4,
+    // pero la dejamos lista aquí porque depende del nickname).
+    window.cambiarUsuario = function () {
+      document.getElementById("contenidoPrincipal").classList.add("hidden");
+      document.getElementById("modalBienvenida").classList.remove("hidden");
+      document.getElementById("formBienvenida").reset();
+      document.getElementById("inputNickname").focus();
     };
 
     // 1. Cargar datos de la tabla
     async function cargarTabla() {
       try {
-        const res = await fetch(`${API_URL}/jugadores`);
+        const res = await fetch(${API_URL}/jugadores);
         todosLosJugadores = await res.json();
         poblarFiltroPaises();
         filtrarJugadores();
@@ -191,7 +343,7 @@
       const paises = [...new Set(todosLosJugadores.map(j => j.pais))].sort();
       
       selectPais.innerHTML = '<option value="">Todos los Países</option>' + 
-        paises.map(p => `<option value="${p}">${p}</option>`).join("");
+        paises.map(p => <option value="${p}">${p}</option>).join("");
       
       selectPais.value = valorPrevio;
     }
@@ -227,7 +379,7 @@
     function renderizarTabla(lista) {
       const tbody = document.getElementById("tablaJugadores");
       if (lista.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No se encontraron jugadores.</td></tr>`;
+        tbody.innerHTML = <tr><td colspan="7" class="p-4 text-center text-slate-400">No se encontraron jugadores.</td></tr>;
         return;
       }
 
@@ -250,7 +402,7 @@
     // 2. Cargar Gráficas
     async function cargarGraficas() {
       try {
-        const res = await fetch(`${API_URL}/estadisticas`);
+        const res = await fetch(${API_URL}/estadisticas);
         const data = await res.json();
 
         if (chartTop10) chartTop10.destroy();
@@ -354,7 +506,7 @@
       if (!confirm("¿Seguro que deseas eliminar este jugador?")) return;
 
       try {
-        const res = await fetch(`${API_URL}/jugadores/${id}`, { method: "DELETE" });
+        const res = await fetch(${API_URL}/jugadores/${id}, { method: "DELETE" });
         if (res.ok) {
           await cargarTabla();
           await cargarGraficas();
@@ -379,7 +531,7 @@
       };
 
       const metodo = id ? "PUT" : "POST";
-      const url = id ? `${API_URL}/jugadores/${id}` : `${API_URL}/jugadores`;
+      const url = id ? ${API_URL}/jugadores/${id} : ${API_URL}/jugadores;
 
       try {
         const res = await fetch(url, {
