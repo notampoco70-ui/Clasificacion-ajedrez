@@ -1,0 +1,10 @@
+
+cd clasificacion-ajedrez
+#Instalar las librerías necesarias de Python
+pip install fastapi uvicorn mysql-connector-python faker
+
+#Llenar la base de datos con los 1,000 registros
+python generador_datos.py
+
+#Iniciar el servidor backend
+python -m uvicorn main:app --reload

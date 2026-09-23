@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Clasificación de Ajedrez</title>
+  <!-- Tailwind CSS por CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js por CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen p-6">
+
+  <div class="max-w-7xl mx-auto space-y-8">
+    
+    <!-- Encabezado -->
+    <header class="flex justify-between items-center border-b border-slate-700 pb-4">
+      <div>
+        <h1 class="text-3xl font-bold text-amber-400">♟️ Clasificación de Ajedrez</h1>
+        <p class="text-slate-400 text-sm">Gestión de jugadores y analíticas en tiempo real</p>
+      </div>
+      <button onclick="abrirModalNuevo()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold px-4 py-2 rounded-lg transition shadow">
+        + Nuevo Jugador
+      </button>
+    </header>
+
+    <!-- 1. Tabla de Jugadores (ARRIBA) con Buscador y Filtros -->
+    <section class="bg-slate-800 rounded-xl border border-slate-700 p-4 shadow space-y-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <h2 class="text-xl font-bold text-slate-200">Listado de Jugadores</h2>
+        
+        <!-- Barra de búsqueda y Filtros -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full md:w-auto">
+          <input 
+            type="text" 
+            id="inputBuscar" 
+            placeholder="🔍 Buscar por nombre..." 
+            oninput="filtrarJugadores()"
+            class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-amber-400"
+          >
+          
+          <select 
+            id="filtroPais" 
+            onchange="filtrarJugadores()"
+            class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-amber-400"
+          >
+            <option value="">Todos los Países</option>
+          </select>
+
+          <select 
+            id="ordenElo" 
+            onchange="filtrarJugadores()"
+            class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-amber-400"
+          >
+            <option value="desc">ELO: Mayor a Menor</option>
+            <option value="asc">ELO: Menor a Mayor</option>
+            <option value="2000+">ELO ≥ 2000 (Maestros)</option>
+            <option value="1500-1999">ELO 1500 - 1999</option>
+            <option value="<1500">ELO &lt; 1500</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="max-h-96 overflow-y-auto border border-slate-700 rounded-lg">
+        <table class="w-full text-left border-collapse">
+          <thead class="bg-slate-700 sticky top-0 text-slate-300 uppercase text-xs">
+            <tr>
+              <th class="p-3">ID</th>
+              <th class="p-3">Nombre</th>
+              <th class="p-3">País</th>
+              <th class="p-3">Título</th>
+              <th class="p-3">ELO</th>
+              <th class="p-3">Partidas</th>
+              <th class="p-3 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tablaJugadores" class="divide-y divide-slate-700 text-sm">
+            <!-- Contenido dinámico -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 2. Sección de Gráficas (ABAJO) -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow flex flex-col h-80">
+        <h3 class="text-lg font-semibold mb-2 text-slate-300">Top 10 Jugadores (ELO)</h3>
+        <div class="relative flex-1 w-full overflow-hidden">
+          <canvas id="chartTop10"></canvas>
+        </div>
+      </div>
+      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow flex flex-col h-80">
+        <h3 class="text-lg font-semibold mb-2 text-slate-300">Distribución por Títulos</h3>
+        <div class="relative flex-1 w-full overflow-hidden">
+          <canvas id="chartTitulos"></canvas>
+        </div>
+      </div>
+      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow flex flex-col h-80">
+        <h3 class="text-lg font-semibold mb-2 text-slate-300">Niveles de ELO</h3>
+        <div class="relative flex-1 w-full overflow-hidden">
+          <canvas id="chartRangos"></canvas>
+        </div>
+      </div>
+      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow flex flex-col h-80">
+        <h3 class="text-lg font-semibold mb-2 text-slate-300">Top 10 Países con Más Jugadores</h3>
+        <div class="relative flex-1 w-full overflow-hidden">
+          <canvas id="chartPaises"></canvas>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Modal para Crear / Editar Jugador -->
+  <div id="modalJugador" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50">
+    <div class="bg-slate-800 rounded-xl max-w-md w-full p-6 border border-slate-700 shadow-xl space-y-4">
+      <h3 id="modalTitulo" class="text-xl font-bold text-amber-400">Agregar Jugador</h3>
+      
+      <form id="formJugador" onsubmit="guardarJugador(event)" class="space-y-3">
+        <input type="hidden" id="jugadorId">
+        
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Nombre Completo</label>
+          <input type="text" id="nombre" required class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm">
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">País</label>
+            <input type="text" id="pais" required class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Título</label>
+            <select id="titulo" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm">
+              <option value="Ninguno">Ninguno</option>
+              <option value="CM">CM</option>
+              <option value="FM">FM</option>
+              <option value="IM">IM</option>
+              <option value="GM">GM</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ELO Inicial</label>
+            <input type="number" id="elo" value="1200" required class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Partidas Jugadas</label>
+            <input type="number" id="partidas" value="0" required class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm">
+          </div>
+        </div>
+
+        <div class="flex justify-end space-x-2 pt-4">
+          <button type="button" onclick="cerrarModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm font-semibold">Cancelar</button>
+          <button type="submit" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold rounded text-sm">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JavaScript -->
+  <script>
+    const API_URL = "http://127.0.0.1:8000/api";
+    let todosLosJugadores = [];
+    let chartTop10, chartTitulos, chartRangos, chartPaises;
+
+    // Inicializar al cargar
+    window.onload = async () => {
+      await cargarTabla();
+      await cargarGraficas();
+    };
+
+    // 1. Cargar datos de la tabla
+    async function cargarTabla() {
+      try {
+        const res = await fetch(`${API_URL}/jugadores`);
+        todosLosJugadores = await res.json();
+        poblarFiltroPaises();
+        filtrarJugadores();
+      } catch (err) {
+        console.error("Error al cargar la tabla:", err);
+      }
+    }
+
+    // Llenar el menú desplegable de países
+    function poblarFiltroPaises() {
+      const selectPais = document.getElementById("filtroPais");
+      const valorPrevio = selectPais.value;
+      const paises = [...new Set(todosLosJugadores.map(j => j.pais))].sort();
+      
+      selectPais.innerHTML = '<option value="">Todos los Países</option>' + 
+        paises.map(p => `<option value="${p}">${p}</option>`).join("");
+      
+      selectPais.value = valorPrevio;
+    }
+
+    // Filtrar y ordenar resultados
+    function filtrarJugadores() {
+      const textoBuscar = document.getElementById("inputBuscar").value.trim().toLowerCase();
+      const paisSeleccionado = document.getElementById("filtroPais").value;
+      const opcionElo = document.getElementById("ordenElo").value;
+
+      let resultados = todosLosJugadores.filter(j => {
+        const cumpleNombre = j.nombre.toLowerCase().includes(textoBuscar);
+        const cumplePais = paisSeleccionado === "" || j.pais === paisSeleccionado;
+        
+        let cumpleRangoElo = true;
+        if (opcionElo === "2000+") cumpleRangoElo = j.elo >= 2000;
+        else if (opcionElo === "1500-1999") cumpleRangoElo = j.elo >= 1500 && j.elo < 2000;
+        else if (opcionElo === "<1500") cumpleRangoElo = j.elo < 1500;
+
+        return cumpleNombre && cumplePais && cumpleRangoElo;
+      });
+
+      if (opcionElo === "asc") {
+        resultados.sort((a, b) => a.elo - b.elo);
+      } else if (opcionElo === "desc") {
+        resultados.sort((a, b) => b.elo - a.elo);
+      }
+
+      renderizarTabla(resultados);
+    }
+
+    // Pintar filas en la tabla
+    function renderizarTabla(lista) {
+      const tbody = document.getElementById("tablaJugadores");
+      if (lista.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No se encontraron jugadores.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = lista.map(j => `
+        <tr class="hover:bg-slate-750 transition">
+          <td class="p-3 text-slate-400">#${j.id}</td>
+          <td class="p-3 font-semibold text-white">${j.nombre}</td>
+          <td class="p-3 text-slate-300">${j.pais}</td>
+          <td class="p-3"><span class="px-2 py-1 bg-slate-700 text-amber-400 text-xs rounded font-bold">${j.titulo}</span></td>
+          <td class="p-3 font-bold text-amber-300">${j.elo}</td>
+          <td class="p-3 text-slate-300">${j.partidas_jugadas}</td>
+          <td class="p-3 text-center space-x-2">
+            <button onclick='editarJugador(${JSON.stringify(j)})' class="text-blue-400 hover:underline text-xs">Editar</button>
+            <button onclick="eliminarJugador(${j.id})" class="text-red-400 hover:underline text-xs">Eliminar</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    // 2. Cargar Gráficas
+    async function cargarGraficas() {
+      try {
+        const res = await fetch(`${API_URL}/estadisticas`);
+        const data = await res.json();
+
+        if (chartTop10) chartTop10.destroy();
+        if (chartTitulos) chartTitulos.destroy();
+        if (chartRangos) chartRangos.destroy();
+        if (chartPaises) chartPaises.destroy();
+
+        const opcionesBase = {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { color: '#cbd5e1' }
+            }
+          }
+        };
+
+        // Top 10
+        chartTop10 = new Chart(document.getElementById("chartTop10"), {
+          type: "bar",
+          data: {
+            labels: data.top_10.map(d => d.nombre),
+            datasets: [{ label: "ELO", data: data.top_10.map(d => d.elo), backgroundColor: "#f59e0b" }]
+          },
+          options: {
+            ...opcionesBase,
+            plugins: { legend: { display: false } }
+          }
+        });
+
+        // Títulos
+        chartTitulos = new Chart(document.getElementById("chartTitulos"), {
+          type: "doughnut",
+          data: {
+            labels: data.titulos.map(d => d.titulo),
+            datasets: [{ data: data.titulos.map(d => d.cantidad), backgroundColor: ["#64748b", "#3b82f6", "#10b981", "#f59e0b", "#ef4444"] }]
+          },
+          options: opcionesBase
+        });
+
+        // Rangos ELO
+        chartRangos = new Chart(document.getElementById("chartRangos"), {
+          type: "pie",
+          data: {
+            labels: data.rangos_elo.map(d => d.rango),
+            datasets: [{ data: data.rangos_elo.map(d => d.cantidad), backgroundColor: ["#38bdf8", "#818cf8", "#c084fc", "#f472b6", "#fb7185"] }]
+          },
+          options: opcionesBase
+        });
+
+        // Países
+        chartPaises = new Chart(document.getElementById("chartPaises"), {
+          type: "bar",
+          data: {
+            labels: data.paises.map(d => d.pais),
+            datasets: [{ label: "Jugadores", data: data.paises.map(d => d.cantidad), backgroundColor: "#6366f1" }]
+          },
+          options: {
+            ...opcionesBase,
+            indexAxis: "y",
+            plugins: { legend: { display: false } }
+          }
+        });
+      } catch (err) {
+        console.error("Error al cargar las gráficas:", err);
+      }
+    }
+
+    // Funciones Globales para Modal y CRUD
+    window.abrirModalNuevo = function() {
+      document.getElementById("modalTitulo").innerText = "Agregar Jugador";
+      document.getElementById("jugadorId").value = "";
+      document.getElementById("formJugador").reset();
+      
+      const modal = document.getElementById("modalJugador");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    };
+
+    window.cerrarModal = function() {
+      const modal = document.getElementById("modalJugador");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    };
+
+    window.editarJugador = function(j) {
+      document.getElementById("modalTitulo").innerText = "Editar Jugador";
+      document.getElementById("jugadorId").value = j.id;
+      document.getElementById("nombre").value = j.nombre;
+      document.getElementById("pais").value = j.pais;
+      document.getElementById("titulo").value = j.titulo;
+      document.getElementById("elo").value = j.elo;
+      document.getElementById("partidas").value = j.partidas_jugadas;
+      
+      const modal = document.getElementById("modalJugador");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    };
+
+    window.eliminarJugador = async function(id) {
+      if (!confirm("¿Seguro que deseas eliminar este jugador?")) return;
+
+      try {
+        const res = await fetch(`${API_URL}/jugadores/${id}`, { method: "DELETE" });
+        if (res.ok) {
+          await cargarTabla();
+          await cargarGraficas();
+        } else {
+          alert("Error al eliminar el jugador.");
+        }
+      } catch (err) {
+        console.error("Error al eliminar jugador:", err);
+      }
+    };
+
+    window.guardarJugador = async function(e) {
+      e.preventDefault();
+      
+      const id = document.getElementById("jugadorId").value;
+      const body = {
+        nombre: document.getElementById("nombre").value,
+        pais: document.getElementById("pais").value,
+        titulo: document.getElementById("titulo").value,
+        elo: parseInt(document.getElementById("elo").value),
+        partidas_jugadas: parseInt(document.getElementById("partidas").value)
+      };
+
+      const metodo = id ? "PUT" : "POST";
+      const url = id ? `${API_URL}/jugadores/${id}` : `${API_URL}/jugadores`;
+
+      try {
+        const res = await fetch(url, {
+          method: metodo,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+
+        if (res.ok) {
+          cerrarModal();
+          await cargarTabla();
+          await cargarGraficas();
+        } else {
+          alert("Error al guardar el jugador. Revisa la consola.");
+        }
+      } catch (err) {
+        console.error("Error en la petición guardarJugador:", err);
+      }
+    };
+  </script>
+</body>
+</html>
