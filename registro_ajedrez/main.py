@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 import mysql.connector
 import os
@@ -28,6 +28,75 @@ def obtener_conexion():
         )
     except mysql.connector.Error as err:
         raise HTTPException(status_code=500, detail=f"Error en la BD MySQL: {err}")
+
+# ==========================================================
+# REGISTRO DE NUEVOS USUARIOS
+# ==========================================================
+
+@app.post("/api/register")
+def register(data: dict):
+    username = data.get("username", "").strip()
+    password = data.get("password", "").strip()
+
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Usuario y contraseña requeridos.")
+
+    try:
+        cnx = obtener_conexion()
+        cursor = cnx.cursor()
+        
+        # Verificar si el usuario ya existe
+        cursor.execute("SELECT id FROM usuarios WHERE username = %s", (username,))
+        if cursor.fetchone():
+            cursor.close()
+            cnx.close()
+            raise HTTPException(status_code=400, detail="El nombre de usuario ya está registrado.")
+
+        # Insertar nuevo usuario con rol predeterminado 'usuario'
+        cursor.execute(
+            "INSERT INTO usuarios (username, password, rol) VALUES (%s, %s, %s)",
+            (username, password, "usuario")
+        )
+        cnx.commit()
+        cursor.close()
+        cnx.close()
+
+        return {"mensaje": "Usuario registrado exitosamente", "username": username, "rol": "usuario"}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==========================================================
+# AUTHENTICATION / AUTENTICACIÓN
+# ==========================================================
+
+@app.post("/api/login")
+def login(data: dict):
+    username = data.get("username", "").strip()
+    password = data.get("password", "").strip()
+
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Usuario y contraseña requeridos.")
+
+    try:
+        cnx = obtener_conexion()
+        cursor = cnx.cursor(dictionary=True)
+        cursor.execute("SELECT id, username, rol FROM usuarios WHERE username = %s AND password = %s", (username, password))
+        user = cursor.fetchone()
+        cursor.close()
+        cnx.close()
+
+        if not user:
+            raise HTTPException(status_code=401, detail="Credenciales incorrectas.")
+
+        return {
+            "mensaje": "Inicio de sesión exitoso",
+            "username": user["username"],
+            "rol": user["rol"]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ==========================================================
 # 1. ENDPOINTS MYSQL (TABLA, ADMINISTRACIÓN Y GRÁFICAS)
@@ -100,10 +169,12 @@ def update_jugador(jugador_id: int, data: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ✅ CÓDIGO NUEVO (PEGAR AQUÍ)
 @app.delete("/api/jugadores/todos")
-def vaciar_base_de_datos():
-    """Borra todos los registros de la tabla jugadores y reinicia el autoincrementable."""
+def vaciar_base_de_datos(x_user_role: str = Header(None, alias="X-User-Role")):
+    """Borra todos los registros de la tabla jugadores (Solo Administrador)."""
+    if x_user_role != "admin":
+        raise HTTPException(status_code=403, detail="Acceso denegado: solo los administradores pueden vaciar la base de datos.")
+
     try:
         cnx = obtener_conexion()
         cursor = cnx.cursor()
@@ -117,6 +188,7 @@ def vaciar_base_de_datos():
 
 @app.delete("/api/jugadores/{jugador_id}")
 def delete_jugador(jugador_id: int):
+    """Permitido tanto para admin como para usuario normal."""
     try:
         cnx = obtener_conexion()
         cursor = cnx.cursor()
@@ -129,8 +201,11 @@ def delete_jugador(jugador_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/jugadores/generar")
-def generar_registros_aleatorios(cantidad: int = 1000):
-    """Genera N registros aleatorios e inserta en lote en MySQL."""
+def generar_registros_aleatorios(cantidad: int = 1000, x_user_role: str = Header(None, alias="X-User-Role")):
+    """Genera N registros aleatorios e inserta en lote en MySQL (Solo Administrador)."""
+    if x_user_role != "admin":
+        raise HTTPException(status_code=403, detail="Acceso denegado: solo los administradores pueden generar registros en masa.")
+
     try:
         fake = Faker()
         TITULOS = ['Ninguno', 'CM', 'FM', 'IM', 'GM']
@@ -253,7 +328,7 @@ OPCIONES_MENU = [
     {"id": 1, "titulo": "Crear Ficha (.txt)", "descripcion": "Valida fecha dd/mm/aa, genera tupla y guarda el archivo"},
     {"id": 2, "titulo": "Listar y Abrir Fichas", "descripcion": "Muestra diccionario de archivos y permite abrir uno"},
     {"id": 3, "titulo": "Escribir/Anexar Datos", "descripcion": "Anexa observaciones al archivo seleccionando su clave"},
-    {"id": 4, "titulo": "Cambiar de Usuario", "descripcion": "Reinicia la sesión del usuario actual"}
+    {"id": 4, "titulo": "Cerrar Sesión", "descripcion": "Reinicia la sesión del usuario actual"}
 ]
 
 @app.get("/api/menu")
